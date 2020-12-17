@@ -9,7 +9,7 @@ pub trait AbstractDomain {
 pub enum SimpleLattice<T: PartialEq> {
   Top,
   Value(T),
-  Bottom
+  Bottom,
 }
 
 impl<T: PartialEq> AbstractDomain for SimpleLattice<T> {
@@ -34,12 +34,12 @@ impl<T: PartialEq> AbstractDomain for SimpleLattice<T> {
         Top => true,
         _ => false,
       },
-      SimpleLattice::Value(x) => match rhs {
+      Value(x) => match rhs {
         Top => true,
         Value(y) => x == y,
         Bottom => false,
       },
-      SimpleLattice::Bottom => true,
+      Bottom => true,
     }
   }
 }
