@@ -56,6 +56,11 @@ inline std::shared_ptr<PatriciaTree<IntegerType>> insert(
     IntegerType key, const std::shared_ptr<PatriciaTree<IntegerType>>& tree);
 
 template <typename IntegerType>
+inline std::shared_ptr<PatriciaTree<IntegerType>> insert_leaf(
+    const std::shared_ptr<PatriciaTreeLeaf<IntegerType>>& leaf,
+    const std::shared_ptr<PatriciaTree<IntegerType>>& tree);
+
+template <typename IntegerType>
 inline std::shared_ptr<PatriciaTree<IntegerType>> remove(
     IntegerType key, const std::shared_ptr<PatriciaTree<IntegerType>>& tree);
 
@@ -260,7 +265,7 @@ class PatriciaTreeSet final {
                                   const PatriciaTreeSet<Element>& s) {
     o << "{";
     for (auto it = s.begin(); it != s.end(); ++it) {
-      o << PatriciaTreeSet<Element>::deref(*it);
+      o << pt_util::Dereference<Element>()(*it);
       if (std::next(it) != s.end()) {
         o << ", ";
       }
@@ -294,18 +299,6 @@ class PatriciaTreeSet final {
   template <typename T = Element,
             typename std::enable_if_t<!std::is_pointer<T>::value, int> = 0>
   static Element decode(Element x) {
-    return x;
-  }
-
-  template <typename T = Element,
-            typename std::enable_if_t<std::is_pointer<T>::value, int> = 0>
-  static const typename std::remove_pointer<T>::type& deref(Element x) {
-    return *x;
-  }
-
-  template <typename T = Element,
-            typename std::enable_if_t<!std::is_pointer<T>::value, int> = 0>
-  static Element deref(Element x) {
     return x;
   }
 
@@ -603,6 +596,49 @@ inline std::shared_ptr<PatriciaTree<IntegerType>> insert(
 }
 
 template <typename IntegerType>
+inline std::shared_ptr<PatriciaTree<IntegerType>> insert_leaf(
+    const std::shared_ptr<PatriciaTreeLeaf<IntegerType>>& leaf,
+    const std::shared_ptr<PatriciaTree<IntegerType>>& tree) {
+  if (tree == nullptr) {
+    return leaf;
+  }
+  if (tree->is_leaf()) {
+    const auto& tree_leaf =
+        std::static_pointer_cast<PatriciaTreeLeaf<IntegerType>>(tree);
+    if (leaf->key() == tree_leaf->key()) {
+      return tree_leaf;
+    }
+    return join<IntegerType>(leaf->key(), leaf, tree_leaf->key(), tree_leaf);
+  }
+  const auto& branch =
+      std::static_pointer_cast<PatriciaTreeBranch<IntegerType>>(tree);
+  if (match_prefix(leaf->key(), branch->prefix(), branch->branching_bit())) {
+    if (is_zero_bit(leaf->key(), branch->branching_bit())) {
+      auto new_left_tree = insert_leaf(leaf, branch->left_tree());
+      if (new_left_tree == branch->left_tree()) {
+        return branch;
+      }
+      return std::make_shared<PatriciaTreeBranch<IntegerType>>(
+          branch->prefix(),
+          branch->branching_bit(),
+          new_left_tree,
+          branch->right_tree());
+    } else {
+      auto new_right_tree = insert_leaf(leaf, branch->right_tree());
+      if (new_right_tree == branch->right_tree()) {
+        return branch;
+      }
+      return std::make_shared<PatriciaTreeBranch<IntegerType>>(
+          branch->prefix(),
+          branch->branching_bit(),
+          branch->left_tree(),
+          new_right_tree);
+    }
+  }
+  return join<IntegerType>(leaf->key(), leaf, branch->prefix(), branch);
+}
+
+template <typename IntegerType>
 inline std::shared_ptr<PatriciaTree<IntegerType>> remove(
     IntegerType key, const std::shared_ptr<PatriciaTree<IntegerType>>& tree) {
   if (tree == nullptr) {
@@ -692,12 +728,12 @@ inline std::shared_ptr<PatriciaTree<IntegerType>> merge(
   if (t->is_leaf()) {
     const auto& leaf =
         std::static_pointer_cast<PatriciaTreeLeaf<IntegerType>>(t);
-    return insert(leaf->key(), s);
+    return insert_leaf(leaf, s);
   }
   if (s->is_leaf()) {
     const auto& leaf =
         std::static_pointer_cast<PatriciaTreeLeaf<IntegerType>>(s);
-    return insert(leaf->key(), t);
+    return insert_leaf(leaf, t);
   }
   const auto& s_branch =
       std::static_pointer_cast<PatriciaTreeBranch<IntegerType>>(s);
