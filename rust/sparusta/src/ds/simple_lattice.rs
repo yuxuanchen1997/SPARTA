@@ -30,7 +30,7 @@ impl<T: PartialEq + Clone> AbstractDomain for SimpleLattice<T> {
       _ => false,
     }
   }
-  
+
   fn is_top(&self) -> bool {
     return match self {
       SimpleLattice::Top => true,
@@ -67,10 +67,6 @@ impl<T: PartialEq + Clone> AbstractDomain for SimpleLattice<T> {
     }
   }
 
-  fn widen(self, rhs: Self) -> Self {
-    return self.join(rhs);
-  }
-  
   fn meet(self, rhs: Self) -> Self {
     use SimpleLattice::*;
     return match self {
@@ -82,6 +78,10 @@ impl<T: PartialEq + Clone> AbstractDomain for SimpleLattice<T> {
       },
       Bottom => Bottom,
     }
+  }
+
+  fn widen(self, rhs: Self) -> Self {
+    return self.join(rhs);
   }
 
   fn narrow(self, rhs: Self) -> Self {

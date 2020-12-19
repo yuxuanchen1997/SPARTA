@@ -14,7 +14,7 @@ pub trait AbstractDomain {
   
     // The following operations moves self and rhs
     fn join(self, rhs: Self) -> Self;
-    fn widen(self, rhs: Self) -> Self;
     fn meet(self, rhs: Self) -> Self;
+    fn widen(self, rhs: Self) -> Self;
     fn narrow(self, rhs: Self) -> Self;
 }

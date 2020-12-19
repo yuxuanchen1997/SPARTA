@@ -7,6 +7,8 @@
 
 mod abstract_domain;
 mod simple_lattice;
+mod powerset;
 
 pub use abstract_domain::*;
 pub use simple_lattice::*;
+pub use powerset::*;
