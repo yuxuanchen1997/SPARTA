@@ -9,27 +9,40 @@ use super::abstract_domain::AbstractDomain;
 use std::collections::HashSet;
 use std::hash::Hash;
 
-// Avoid using HashSet<T> directly? Use another type arguement that
-// requires it to have a "Set" trait implemented.
+pub trait SetOps {
+  fn is_subset(&self, other: &Self) -> bool;
+  fn intersection(&self, other: &Self) -> Self;
+  fn union(&self, other: &Self) -> Self;
+}
+
+impl<T: Eq + Hash + Clone> SetOps for HashSet<T> {
+  fn is_subset(&self, other: &Self) -> bool {
+    return self.is_subset(other);
+  }
+
+  fn intersection(&self, other: &Self) -> Self {
+    return self.intersection(&other).cloned().collect();
+  }
+
+  fn union(&self, other: &Self) -> Self {
+    return self.union(&other).cloned().collect();
+  }
+}
+
 #[derive(PartialEq, Eq, Clone)]
-pub enum PowersetLattice<T: Eq + Hash + Clone> {
+pub enum PowersetLattice<S: SetOps> {
   Top,
-  Value(HashSet<T>),
+  Value(S),
   Bottom,
 }
 
-// trait SetOps<T> {
-//   fn iter(&self) -> Iterator;
-//   fn contains<Q: ?Sized>(&self, value: &Q) -> bool;
-// }
-
-impl<T: Eq + Hash + Clone> AbstractDomain for PowersetLattice<T> {
-  fn bottom() -> PowersetLattice<T> {
-    return PowersetLattice::<T>::Bottom;
+impl<S: SetOps> AbstractDomain for PowersetLattice<S> {
+  fn bottom() -> PowersetLattice<S> {
+    return PowersetLattice::<S>::Bottom;
   }
 
-  fn top() -> PowersetLattice<T> {
-    return PowersetLattice::<T>::Top;
+  fn top() -> PowersetLattice<S> {
+    return PowersetLattice::<S>::Top;
   }
 
   fn is_bottom(&self) -> bool {
@@ -66,7 +79,7 @@ impl<T: Eq + Hash + Clone> AbstractDomain for PowersetLattice<T> {
       Value(ref s) => match rhs {
         Top => rhs,
         // Is this ineffecient? Can we just ref mut s itself?
-        Value(ref t) => Value(s.union(&t).cloned().collect()),
+        Value(ref t) => Value(s.union(t)),
         Bottom => self,
       },
       Bottom => rhs,
@@ -79,7 +92,7 @@ impl<T: Eq + Hash + Clone> AbstractDomain for PowersetLattice<T> {
       Top => rhs,
       Value(ref s) => match rhs {
         Top => self,
-        Value(ref t) => Value(s.intersection(&t).cloned().collect()),
+        Value(ref t) => Value(s.intersection(t)),
         Bottom => rhs,
       },
       Bottom => self,
